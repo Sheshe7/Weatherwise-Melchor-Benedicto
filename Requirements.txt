@@ -1,0 +1,14 @@
+My list of libraries:
+!pip install fetch-my-weather
+!pip install hands-on-ai
+!pip install bs4
+!pip install requests
+!pip install matplotlib pyinputplus
+!pip install requests matplotlib
+import requests
+import matplotlib.pyplot as plt
+import pyinputplus as pyip
+from fetch_my_weather import get_weather
+from hands_on_ai.chat import get_response
+from datetime import datetime
+import sys
