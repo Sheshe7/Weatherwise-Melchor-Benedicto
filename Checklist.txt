@@ -1,0 +1,102 @@
+title: "Project Completion Checklist"
+author: "Melchor Benedicto"
+format: 
+
+---
+
+Use this checklist to track your progress and ensure your Weather Advisor project meets all requirements before submission.
+
+## Repository Setup
+
+- [v ] Repository created from template
+- [ v] README.md updated with your project information
+- [ v] Instructor (michael-borck) invited to your repository
+
+## Notebook Organisation
+
+- [v ] Notebook has clear section headers using markdown cells
+- [v ] Sections are logically organised and follow the required structure
+- [v ] Code includes appropriate comments and docstrings
+- [v ] No unused code or unnecessary cells
+- [v ] All imports are at the top of the notebook or in the appropriate section
+
+## Weather Data Component
+
+- [v ] Successfully retrieves weather data from chosen source
+- [v ] Handles connection errors and timeouts gracefully
+- [v ] Validates user input (e.g., city names, parameters)
+- [v ] Processes and structures the data for use in the application
+- [v ] Provides meaningful error messages for users
+
+## Visualisation Component
+
+- [v ] Implements at least 2 different visualisation types
+- [v ] All visualisations have proper titles, labels, and legends
+- [v ] Visualisations are readable and use appropriate colors
+- [v ] Handles edge cases (e.g., missing data, extreme values)
+- [v ] Visualisations are relevant to the data being displayed
+
+## Natural Language Interface
+
+- [v ] Successfully parses user questions to extract key information
+- [v ] Identifies locations in user queries
+- [v ] Identifies time periods in user queries (today, tomorrow, etc.)
+- [v ] Identifies weather attributes (temperature, rain, etc.)
+- [v ] Generates natural-sounding responses to user questions
+
+## User Interface
+
+- [v ] Implements a clear menu system using pyinputplus
+- [v ] Provides appropriate feedback to users
+- [v ] Has a logical flow between different options
+- [v ] Handles invalid inputs gracefully
+- [v ] Maintains a clean and organised display
+
+## AI Interaction Documentation
+
+- [v ] PROMPTING.md file completed with detailed examples
+- [v ] At least 5 significant AI conversations documented
+- [v ] Conversations saved as text files in the repository
+- [v ] Demonstrates at least 5 different intentional prompting techniques
+- [v ] Six-step methodology documented for at least one component
+- [v ] 3 clear before/after examples included
+
+## Technical Requirements
+
+- [v ] All code runs without errors in Google Colab
+- [v ] No hardcoded sensitive data (API keys, personal information)
+- [v ] Modular design with functions for specific tasks
+- [v ] Appropriate error handling throughout the application
+- [v ] Code follows consistent style (variable naming, indentation, etc.)
+
+## Final Testing
+
+- [v ] Tested with multiple locations
+- [v ] Tested with various types of weather questions
+- [v ] Tested with edge cases (invalid locations, connection issues)
+- [v ] All menu options function as expected
+- [v ] Visualisations render correctly
+
+## Documentation Quality
+
+- [v ] Code is well-commented with meaningful docstrings
+- [v ] README.md provides clear overview and instructions
+- [v ] PROMPTING.md shows thoughtful AI interaction
+- [v ] Reflection document (300-500 words) included
+- [v ] All required files are present and properly formatted
+
+## Submission
+
+- [v ] Final version of notebook saved to GitHub
+- [v ] All AI conversation files included
+- [v ] PROMPTING.md file completed
+- [v ] Reflection document included
+- [v ] Repository link submitted through required channel
+
+## Extra Credit (Optional)
+
+- [ ] Implemented additional features beyond basic requirements
+- [ ] Created especially innovative visualisations
+- [v ] Developed advanced natural language understanding capabilities
+- [ ] Demonstrated exceptional intentional prompting techniques
+- [v ] Utilised the hands-on-ai package in creative ways
