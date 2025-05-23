@@ -1,0 +1,344 @@
+title: "Before/After Example:
+author: "Melchor Benedicto"
+
+---
+
+
+## Initial Prompt
+
+Provide a code that retrieves data for specified location. The code mustbe intergrated with Current condition and forecast displays, data visualisation,and natural language interface.Additionally, the code must also allow users to ask questions and get answers in a natural language.  
+```
+
+## Initial AI-Generated Code (Before)
+
+import requests
+import pyinputplus as pyip
+import matplotlib.pyplot as plt
+from datetime import datetime
+import sys
+
+API_KEY = open('api_key.txt').read().strip()
+BASE_URL_CURRENT = "https://api.openweathermap.org/data/2.5/weather"
+BASE_URL_FORECAST = "https://api.openweathermap.org/data/2.5/forecast"
+
+def get_weather(city, units="metric"):
+    params = {"q": city, "appid": API_KEY, "units": units}
+    try:
+        response = requests.get(BASE_URL_CURRENT, params=params, timeout=10)
+        response.raise_for_status()
+        return response.json()
+    except requests.exceptions.RequestException as e:
+        print(f"Error: {e}")
+        return None
+
+def get_forecast(city, units="metric"):
+    params = {"q": city, "appid": API_KEY, "units": units}
+    try:
+        response = requests.get(BASE_URL_FORECAST, params=params, timeout=10)
+        response.raise_for_status()
+        return response.json()
+    except requests.exceptions.RequestException as e:
+        print(f"Error: {e}")
+        return None
+
+def display_current_weather(data):
+    if not data:
+        print("No data to display.")
+        return
+    name = data['name']
+    country = data['sys']['country']
+    temp = data['main']['temp']
+    condition = data['weather'][0]['description'].title()
+    print(f"\n📍 {name}, {country}")
+    print(f"🌡️  Temperature: {temp}°C")
+    print(f"🌤️  Conditions: {condition}")
+    print(f"💧 Humidity: {data['main']['humidity']}%")
+    print(f"💨 Wind: {data['wind']['speed']} m/s")
+
+def plot_temperature_trend(forecast_data):
+    dates = []
+    temps = []
+    for entry in forecast_data['list']:
+        dates.append(datetime.fromtimestamp(entry['dt']))
+        temps.append(entry['main']['temp'])
+
+    plt.figure(figsize=(10, 5))
+    plt.plot(dates, temps, label='Temperature (°C)', marker='o')
+    plt.title("Temperature Trend (Next 5 Days)")
+    plt.xlabel("Date & Time")
+    plt.ylabel("Temperature (°C)")
+    plt.xticks(rotation=45)
+    plt.grid(True)
+    plt.tight_layout()
+    plt.legend()
+    plt.show()
+
+def plot_precipitation_chance(forecast_data):
+    dates = []
+    rain = []
+    for entry in forecast_data['list']:
+        dates.append(datetime.fromtimestamp(entry['dt']))
+        rain.append(entry.get('rain', {}).get('3h', 0))
+
+    plt.figure(figsize=(10, 5))
+    plt.bar(dates, rain, label='Rain Volume (mm)', color='blue')
+    plt.title("Rain Forecast (Next 5 Days)")
+    plt.xlabel("Date & Time")
+    plt.ylabel("Rain (mm)")
+    plt.xticks(rotation=45)
+    plt.grid(True)
+    plt.tight_layout()
+    plt.legend()
+    plt.show()
+
+def parse_natural_language_query(query, city):
+    """Basic keyword-based parser"""
+    query = query.lower()
+    if "temperature" in query or "hot" in query:
+        weather = get_weather(city)
+        if weather:
+            print(f"It is currently {weather['main']['temp']}°C with {weather['weather'][0]['description']}.")
+    elif "rain" in query or "precipitation" in query:
+        forecast = get_forecast(city)
+        if forecast:
+            for entry in forecast['list'][:8]:
+                rain = entry.get('rain', {}).get('3h', 0)
+                time = datetime.fromtimestamp(entry['dt']).strftime("%a %H:%M")
+                print(f"⏰ {time}: 🌧️ {rain} mm rain expected")
+    else:
+        print("I didn't understand your question. Try asking about temperature or rain.")
+
+def main_menu():
+    print("🌦️ Welcome to the Weather Assistant 🌦️")
+    city = pyip.inputStr(prompt="Enter city name: ")
+    while True:
+        print("\nMain Menu:")
+        choice = pyip.inputMenu(
+            ["Current Weather", "5-Day Forecast Chart", "Ask a Question", "Exit"],
+            numbered=True
+        )
+
+        if choice == "Current Weather":
+            data = get_weather(city)
+            display_current_weather(data)
+        elif choice == "5-Day Forecast Chart":
+            forecast_data = get_forecast(city)
+            if forecast_data:
+                plot_temperature_trend(forecast_data)
+                plot_precipitation_chance(forecast_data)
+        elif choice == "Ask a Question":
+            query = pyip.inputStr(prompt="Ask a weather question: ")
+            parse_natural_language_query(query, city)
+        elif choice == "Exit":
+            print("Goodbye!")
+            sys.exit()
+
+if __name__ == "__main__":
+    main_menu()
+
+
+## My Analysis of the Initial Code
+
+The initial code has several issues:
+
+1. No real parsing, which causes misinterpretation of data that was input. 
+2. No input validation for invalid cities, which causes errors from the API.
+3. Raw forecast interpretation, data are not gouped by day, and some words such as tomorrow are not misinterpreted.
+4. Absence of logging and debugging, which can negatively decrease the performance of the code. 
+5. No caching of API calls. As consequence there  is slow response times for users. 
+6. No testing frameworw such as Pytest or unittest for functions like get_weather. 
+
+## My Follow-up Prompt
+
+I would like to add the following features  in order to fix all the issues found in the initial code. 
+
+1. Intergrate natural language  processing such as SpaCy and tranformer. 
+2. Provide input validation for invalind cities. 
+3. A timeout parameter to prevent hanging
+4. Group forecast entries by days for easy retrieval and display. 
+5. Use the pre-installed logging module instead of the print one we type for error messages.
+6. Implement a cache recent call module which in this case will be functools.lru_cache(). 
+
+```
+
+## Improved AI-Generated Code (After)
+
+import requests
+import pyinputplus as pyip
+import matplotlib.pyplot as plt
+import logging
+from datetime import datetime
+import sys
+import os
+
+# Setup logging
+logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
+
+# Load API key - Directly use the API key string
+# Removed the file path check and file reading
+API_KEY = '148e8cfafb2e24494693f49edb7e2296'
+
+# Check if the API key is empty
+if not API_KEY:
+    print("API key is empty. Please provide a valid API key.")
+    sys.exit(1)
+
+BASE_URL_CURRENT = "https://api.openweathermap.org/data/2.5/weather"
+BASE_URL_FORECAST = "https://api.openweathermap.org/data/2.5/forecast"
+
+def get_weather(city, units="metric"):
+    params = {"q": city, "appid": API_KEY, "units": units}
+    try:
+        response = requests.get(BASE_URL_CURRENT, params=params, timeout=10)
+        response.raise_for_status()
+        data = response.json()
+        if data.get("cod") != 200: # Note: API returns 200 for success, not a string "200"
+            print(f"Error: {data.get('message', 'Unknown error')}")
+            return None
+        return data
+    except requests.exceptions.RequestException as e:
+        logging.error(f"Weather request failed: {e}")
+        return None
+
+def get_forecast(city, units="metric"):
+    params = {"q": city, "appid": API_KEY, "units": units}
+    try:
+        response = requests.get(BASE_URL_FORECAST, params=params, timeout=10)
+        response.raise_for_status()
+        data = response.json()
+        if data.get("cod") != "200":
+            print(f"Error: {data.get('message', 'Unknown error')}")
+            return None
+        return data
+    except requests.exceptions.RequestException as e:
+        logging.error(f"Forecast request failed: {e}")
+        return None
+
+def display_current_weather(data, units="metric"):
+    if not data:
+        print("No data to display.")
+        return
+    name = data.get('name')
+    country = data['sys'].get('country', 'N/A')
+    temp = data['main'].get('temp', 'N/A')
+    condition = data['weather'][0].get('description', 'N/A').title()
+    temp_unit = '°C' if units == 'metric' else '°F' if units == 'imperial' else 'K'
+    print(f"\n📍 {name}, {country}")
+    print(f"🌡️  Temperature: {temp}{temp_unit}")
+    print(f"🌤️  Conditions: {condition}")
+    print(f"💧 Humidity: {data['main'].get('humidity')}%")
+    print(f"💨 Wind: {data['wind'].get('speed')} m/s")
+
+def plot_temperature_trend(forecast_data, units="metric"):
+    dates = []
+    temps = []
+    # Add check for 'list' key
+    if 'list' not in forecast_data or not forecast_data['list']:
+        print("No forecast entries found for plotting temperature.")
+        return
+    for entry in forecast_data['list']:
+        dates.append(datetime.fromtimestamp(entry['dt']))
+        temps.append(entry['main']['temp'])
+
+    plt.figure(figsize=(10, 5))
+    plt.plot(dates, temps, label='Temperature', marker='o')
+    plt.title("Temperature Trend (Next 5 Days)")
+    plt.xlabel("Date & Time")
+    plt.ylabel(f"Temperature ({'°C' if units == 'metric' else '°F'})")
+    plt.xticks(rotation=45)
+    plt.grid(True)
+    plt.tight_layout()
+    plt.legend()
+    plt.show()
+
+def plot_precipitation_chance(forecast_data):
+    dates = []
+    rain = []
+    # Add check for 'list' key
+    if 'list' not in forecast_data or not forecast_data['list']:
+        print("No forecast entries found for plotting precipitation.")
+        return
+    for entry in forecast_data['list']:
+        dates.append(datetime.fromtimestamp(entry['dt']))
+        rain.append(entry.get('rain', {}).get('3h', 0))
+
+    plt.figure(figsize=(10, 5))
+    plt.bar(dates, rain, label='Rain Volume (mm)', color='blue')
+    plt.title("Rain Forecast (Next 5 Days)")
+    plt.xlabel("Date & Time")
+    plt.ylabel("Rain (mm)")
+    plt.xticks(rotation=45)
+    plt.grid(True)
+    plt.tight_layout()
+    plt.legend()
+    plt.show()
+
+def parse_natural_language_query(query, city, units="metric"):
+    query = query.lower()
+    if "temperature" in query or "hot" in query:
+        weather = get_weather(city, units)
+        if weather:
+            print(f"It is currently {weather['main']['temp']}° with {weather['weather'][0]['description']}.")
+    elif "rain" in query or "precipitation" in query:
+        forecast = get_forecast(city, units)
+        if forecast:
+            print("🌧️ Rain forecast (next 24h):")
+            # Add check for 'list' key before slicing
+            if 'list' in forecast:
+                for entry in forecast['list'][:8]:
+                    rain = entry.get('rain', {}).get('3h', 0)
+                    time = datetime.fromtimestamp(entry['dt']).strftime("%a %H:%M")
+                    print(f"⏰ {time}: 🌧️ {rain} mm")
+            else:
+                print("No forecast data available.")
+    else:
+        print("I didn't understand your question. Try asking about temperature or rain.")
+
+def choose_units():
+    unit_choice = pyip.inputMenu(["Metric (°C, m/s)", "Imperial (°F, mph)", "Standard (K, m/s)"],
+                                 prompt="Choose temperature units:\n", numbered=True)
+    return {"Metric (°C, m/s)": "metric", "Imperial (°F, mph)": "imperial", "Standard (K, m/s)": "standard"}[unit_choice]
+
+def main_menu():
+    print("🌦️ Welcome to the Enhanced Weather Assistant 🌦️")
+    city = pyip.inputStr(prompt="Enter city name: ")
+    units = choose_units()
+
+    while True:
+        print("\nMain Menu:")
+        choice = pyip.inputMenu(
+            ["Current Weather", "5-Day Forecast Chart", "Ask a Question", "Change City", "Change Units", "Exit"],
+            numbered=True
+        )
+
+        if choice == "Current Weather":
+            data = get_weather(city, units)
+            display_current_weather(data, units)
+        elif choice == "5-Day Forecast Chart":
+            forecast_data = get_forecast(city, units)
+            if forecast_data:
+                plot_temperature_trend(forecast_data, units)
+                plot_precipitation_chance(forecast_data)
+        elif choice == "Ask a Question":
+            query = pyip.inputStr(prompt="Ask a weather question: ")
+            parse_natural_language_query(query, city, units)
+        elif choice == "Change City":
+            city = pyip.inputStr(prompt="Enter new city name: ")
+        elif choice == "Change Units":
+            units = choose_units()
+        elif choice == "Exit":
+            print("Goodbye!")
+         break
+if __name__ == "__main__":
+    main_menu()
+
+## Why My Prompting Strategy Was Effective
+
+My follow-up prompt was effective because:
+
+1. **I managed to find were the issue was and i provided a solution to handle and solver the issue. 
+2. **I requested specific improvements** with clear objectives (error handling, validation, etc.)
+3. **I Implemented new features such as Pytest and unittest which enable  us to test if a field of code can run as intended.
+4. ** I added an adequate natural language for users to easily understand and have clear responses. 
+5. I changed the way the first code was accessing to the web, from being api_key.txt(which uses stored API) to API_KEY:*user input the respective api-key*( which accesses directly to the web page)
+
