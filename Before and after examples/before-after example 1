@@ -1,0 +1,389 @@
+title: "Before/After Example: Weather Data Retrieval Function"
+author: Melchor Benedicto
+ 
+
+## Initial Prompt
+
+provide a code that allows access and data retrieval in different webs,plus the code must allow users to ask weather-related questions. Additionally, within the code there must be data visualisation and current condition and forecast.  
+```
+
+## Initial AI-Generated Code (Before)
+
+class WeatherApp:
+    def __init__(self, api_key: str):
+        self.api_key = '148e8cfafb2e24494693f49edb7e2296'
+        self.base_url = "https://api.openweathermap.org/data/2.5/"
+        self.units = "metric"  # can be "metric", "imperial", or "standard"
+        self.cache = {}  # Simple cache to store recent requests
+        self.timeout = 10  # Request timeout in seconds
+        self.max_cache_size = 100  # Maximum number of items to cache
+
+    def _make_request(self, endpoint: str, params: Dict) -> Dict:
+        """Helper method to make API requests with error handling"""
+        try:
+            url = f"{self.base_url}{endpoint}"
+            params['appid'] = self.api_key
+            params['units'] = self.units
+            
+            cache_key = f"{endpoint}?{json.dumps(params, sort_keys=True)}"
+            
+            # Check cache first
+            if cache_key in self.cache:
+                return self.cache[cache_key]
+                
+            response = requests.get(url, params=params, timeout=self.timeout)
+            response.raise_for_status()
+            
+            data = response.json()
+            
+            # Update cache
+            if len(self.cache) >= self.max_cache_size:
+                self.cache.pop(next(iter(self.cache)))
+            self.cache[cache_key] = data
+            
+            return data
+            
+        except requests.exceptions.HTTPError as err:
+            error_msg = f"HTTP Error: {err.response.status_code} - {err.response.text}"
+            raise Exception(error_msg) from err
+        except requests.exceptions.RequestException as err:
+            raise Exception(f"Request failed: {str(err)}") from err
+        except json.JSONDecodeError as err:
+            raise Exception("Failed to parse API response") from err
+
+    def get_weather(self, location: Union[str, tuple]) -> Dict:
+        """Get current weather data for a location
+        
+        Args:
+            location: Can be either:
+                     - City name (e.g., "London")
+                     - Tuple of (latitude, longitude)
+                     
+        Returns:
+            Dictionary containing weather data
+        """
+        params = {}
+        
+        if isinstance(location, tuple):
+            lat, lon = location
+            params['lat'] = lat
+            params['lon'] = lon
+        else:
+            params['q'] = location
+            
+        return self._make_request("weather", params)
+
+    def get_forecast(self, location: Union[str, tuple], days: int = 5) -> Dict:
+        """Get weather forecast for a location
+        
+        Args:
+            location: Can be either city name or (lat, lon) tuple
+            days: Number of days for forecast (1-5)
+            
+        Returns:
+            Dictionary containing forecast data
+        """
+        params = {'cnt': days * 8}  # 8 measurements per day
+        
+        if isinstance(location, tuple):
+            lat, lon = location
+            params['lat'] = lat
+            params['lon'] = lon
+        else:
+            params['q'] = location
+            
+        return self._make_request("forecast", params)
+
+    def get_weather_by_zip(self, zip_code: str, country_code: str = "us") -> Dict:
+        """Get weather by ZIP code"""
+        params = {'zip': f"{zip_code},{country_code}"}
+        return self._make_request("weather", params)
+
+    def set_units(self, units: str) -> None:
+        """Set units for temperature (metric, imperial, or standard)"""
+        if units.lower() not in ("metric", "imperial", "standard"):
+            raise ValueError("Units must be 'metric', 'imperial', or 'standard'")
+        self.units = units.lower()
+
+    def format_weather_output(self, data: Dict) -> str:
+        """Format weather data into human-readable string"""
+        try:
+            city = data.get('name', 'Unknown location')
+            country = data.get('sys', {}).get('country', '')
+            temp = data.get('main', {}).get('temp', 'N/A')
+            feels_like = data.get('main', {}).get('feels_like', 'N/A')
+            humidity = data.get('main', {}).get('humidity', 'N/A')
+            weather_desc = data.get('weather', [{}])[0].get('description', 'N/A')
+            wind_speed = data.get('wind', {}).get('speed', 'N/A')
+            sunrise = datetime.fromtimestamp(data.get('sys', {}).get('sunrise', 0)).strftime('%H:%M')
+            sunset = datetime.fromtimestamp(data.get('sys', {}).get('sunset', 0)).strftime('%H:%M')
+            
+            unit_symbol = '°C' if self.units == 'metric' else '°F' if self.units == 'imperial' else 'K'
+            
+            return (
+                f"Weather in {city}, {country}:\n"
+                f"• Temperature: {temp}{unit_symbol} (Feels like {feels_like}{unit_symbol})\n"
+                f"• Conditions: {weather_desc}\n"
+                f"• Humidity: {humidity}%\n"
+                f"• Wind: {wind_speed} m/s\n"
+                f"• Sunrise: {sunrise}, Sunset: {sunset}"
+            )
+        except Exception as e:
+            return f"Error formatting weather data: {str(e)}"
+
+    def get_air_pollution(self, location: Union[str, tuple]) -> Dict:
+        """Get air pollution data for a location"""
+        if isinstance(location, str):
+            # First get coordinates for the city name
+            weather_data = self.get_weather(location)
+            lat = weather_data['coord']['lat']
+            lon = weather_data['coord']['lon']
+        else:
+            lat, lon = location
+            
+        params = {'lat': lat, 'lon': lon}
+        return self._make_request("air_pollution", params)
+    app = WeatherApp(api_key)
+    app.run()
+    
+    return data
+
+The output is: 
+
+```Current Weather in Malta, US
+==================================================
+Temperature: 7.87°C (Feels like 5.66°C)
+Weather: Rain - light rain
+Humidity: 91%
+Wind: 3.49 m/s, Direction: 104°
+Pressure: 1016 hPa
+Visibility: 10000 meters
+Cloudiness: 100%
+Sunrise: 11:26:20, Sunset: 02:49:55
+
+## My Analysis of the Initial Code
+
+The initial code has several issues:
+
+1. No error handling – which can prevent the user from knowing where the crash has occurred.  
+2. No input validation of API key. Validation prevents injection attacks and decreases the need to process invalid data.  
+3. No request metric. Preventing us from monitoring and viewing all the requests sent to a server.
+4.No forecasting formatting, which causes the output of raw and not summarized data. 
+5. No timeout or try/except strategy. 
+6. No test or logging for debbuging. 
+
+## My Follow-up Prompt
+
+What are some features that i can add to the previous code to correct and fix all the different iconsistencies.
+ 
+Based on the previous code, I would like to add some features to improve it.
+
+1. Rate limiting. It will help our code from overloads caused by a user who tries to gain access multiple times.  
+2. Add data model and phyton parsers that transform our code into a more readable format. 
+3. Integrate error handling. Enable us to anticipate errors and carefully manage them.
+4. Add method like format_forecast(data) to show temperature and other weather conditions.  
+5. Replace and use logging intead of print() for diagnostics. 
+
+## Improved AI-Generated Code (After)
+
+```python
+lass WeatherApp:
+    def __init__(self, api_key):
+        self.api_key = '148e8cfafb2e24494693f49edb7e2296'
+        self.base_url = "http://api.openweathermap.org/data/2.5/"
+        self.units = "metric"  # can be changed to "imperial"
+
+    def get_weather(self, location):
+        """Get current weather data for a location"""
+        try:
+            # First try to get coordinates by location name
+            geo_url = f"{self.base_url}weather?q={location}&appid={self.api_key}&units={self.units}"
+            response = requests.get(geo_url)
+            response.raise_for_status()
+            data = response.json()
+
+            return {
+                'success': True,
+                'data': data,
+                'location': data['name'],
+                'country': data['sys']['country'],
+                'lat': data['coord']['lat'],
+                'lon': data['coord']['lon']
+            }
+        except requests.exceptions.RequestException as e:
+            return {'success': False, 'error': str(e)}
+
+    def get_forecast(self, lat, lon):
+        """Get 5-day weather forecast with 3-hour intervals"""
+        try:
+            url = f"{self.base_url}forecast?lat={lat}&lon={lon}&appid={self.api_key}&units={self.units}"
+            response = requests.get(url)
+            response.raise_for_status()
+            data = response.json()
+            return {'success': True, 'data': data}
+        except requests.exceptions.RequestException as e:
+            return {'success': False, 'error': str(e)}
+
+    def display_current_weather(self, weather_data):
+        """Display current weather conditions"""
+        if not weather_data['success']:
+            print(f"Error: {weather_data['error']}")
+            return
+
+        data = weather_data['data']
+        print("\n" + "="*50)
+        print(f"Current Weather in {weather_data['location']}, {weather_data['country']}")
+        print("="*50)
+        print(f"Temperature: {data['main']['temp']}°C (Feels like {data['main']['feels_like']}°C)")
+        print(f"Weather: {data['weather'][0]['main']} - {data['weather'][0]['description']}")
+        print(f"Humidity: {data['main']['humidity']}%")
+        print(f"Wind: {data['wind']['speed']} m/s, Direction: {data['wind']['deg']}°")
+        print(f"Pressure: {data['main']['pressure']} hPa")
+        print(f"Visibility: {data.get('visibility', 'N/A')} meters")
+        print(f"Cloudiness: {data['clouds']['all']}%")
+        sunrise = datetime.fromtimestamp(data['sys']['sunrise']).strftime('%H:%M:%S')
+        sunset = datetime.fromtimestamp(data['sys']['sunset']).strftime('%H:%M:%S')
+        print(f"Sunrise: {sunrise}, Sunset: {sunset}")
+        print("="*50 + "\n")
+
+    def process_forecast_data(self, forecast_data):
+        """Process forecast data for visualization"""
+        if not forecast_data['success']:
+            return None
+
+        forecast_list = forecast_data['data']['list']
+        processed_data = []
+
+        for entry in forecast_list:
+            timestamp = datetime.fromtimestamp(entry['dt'])
+            temp = entry['main']['temp']
+            humidity = entry['main']['humidity']
+            wind_speed = entry['wind']['speed']
+            weather_desc = entry['weather'][0]['description']
+            rain = entry.get('rain', {}).get('3h', 0)
+
+            processed_data.append({
+                'datetime': timestamp,
+                'date': timestamp.date(),
+                'time': timestamp.time(),
+                'temperature': temp,
+                'humidity': humidity,
+                'wind_speed': wind_speed,
+                'weather': weather_desc,
+                'rain': rain
+            })
+
+        return pd.DataFrame(processed_data)
+
+    def visualize_forecast(self, df):
+        """Create visualizations of forecast data"""
+        if df is None or df.empty:
+            print("No forecast data to visualize.")
+            return
+
+        plt.figure(figsize=(15, 10))
+
+        # Temperature plot
+        plt.subplot(2, 2, 1)
+        sns.lineplot(data=df, x='datetime', y='temperature', marker='o')
+        plt.title('Temperature Forecast')
+        plt.xlabel('Date/Time')
+        plt.ylabel('Temperature (°C)')
+        plt.xticks(rotation=45)
+
+        # Humidity plot
+        plt.subplot(2, 2, 2)
+        sns.lineplot(data=df, x='datetime', y='humidity', marker='o', color='green')
+        plt.title('Humidity Forecast')
+        plt.xlabel('Date/Time')
+        plt.ylabel('Humidity (%)')
+        plt.xticks(rotation=45)
+
+        # Wind speed plot
+        plt.subplot(2, 2, 3)
+        sns.lineplot(data=df, x='datetime', y='wind_speed', marker='o', color='orange')
+        plt.title('Wind Speed Forecast')
+        plt.xlabel('Date/Time')
+        plt.ylabel('Wind Speed (m/s)')
+        plt.xticks(rotation=45)
+
+        # Rain plot
+        plt.subplot(2, 2, 4)
+        if df['rain'].sum() > 0:
+            sns.barplot(data=df, x='datetime', y='rain', color='blue')
+            plt.title('Rain Forecast (3h accumulation)')
+            plt.xlabel('Date/Time')
+            plt.ylabel('Rain (mm)')
+            plt.xticks(rotation=45)
+        else:
+            plt.text(0.5, 0.5, 'No rain forecasted', ha='center', va='center')
+            plt.title('Rain Forecast')
+
+        plt.tight_layout()
+        plt.show()
+
+    def save_to_json(self, data, filename):
+        """Save weather data to JSON file"""
+        try:
+            with open(filename, 'w') as f:
+                json.dump(data, f, indent=4)
+            print(f"Data saved to {filename}")
+        except Exception as e:
+            print(f"Error saving file: {e}")
+
+    def run(self):
+        """Main application loop"""
+        print("Weather Data Retrieval and Visualization Tool")
+        print("-------------------------------------------")
+
+        while True:
+            location = input("\nEnter a city name (or 'quit' to exit): ").strip()
+            if location.lower() == 'quit':
+                break
+
+            # Get current weather
+            current_weather = self.get_weather(location)
+            if not current_weather['success']:
+                print(f"Error retrieving weather data: {current_weather['error']}")
+                continue
+
+            self.display_current_weather(current_weather)
+
+            # Get forecast
+            forecast = self.get_forecast(current_weather['lat'], current_weather['lon'])
+            if not forecast['success']:
+                print(f"Error retrieving forecast: {forecast['error']}")
+                continue
+
+            # Process and visualize forecast data
+            df = self.process_forecast_data(forecast)
+            self.visualize_forecast(df)
+            print(f"View on OpenWeatherMap: https://openweathermap.org/city/{current_weather['data']['id']}")
+
+            # Option to save data
+            if input("Would you like to save this weather data? (y/n): ").lower() == 'y':
+                timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+                filename = f"weather_data_{current_weather['location']}_{timestamp}.json"
+                combined_data = {
+                    'current': current_weather['data'],
+                    'forecast': forecast['data']
+                }
+                self.save_to_json(combined_data, filename)
+                break  # Exit the loop after saving data
+
+if __name__ == "__main__":
+    # Get API key - you should store this more securely in production
+    api_key = os.getenv('OPENWEATHER_API_KEY') or input("Enter your OpenWeatherMap API key: ")
+
+    app = WeatherApp(api_key)
+    app.run()
+
+## Why My Prompting Strategy Was Effective
+
+My follow-up prompt was effective because:
+
+1. **I was able to identify the missing things in that code and errors*
+2. **Once I identified what was missing i recommended some improvement and additional things, ehich i implemented right after.
+3. ** I added error handling and data validation entries to improve the code's performance. 
+4. **I suggested a new feature such as Phyton parsers to make our code readable** 
+
